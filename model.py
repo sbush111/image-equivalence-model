@@ -1,5 +1,6 @@
 from config import Config
-from torch import nn, sigmoid, Tensor
+import torch
+from torch import nn, Tensor
 from torch.nn import functional as F
 from typing import Self
 
@@ -34,7 +35,21 @@ class ImagePairMatcher(nn.Module):
         self.gap = nn.AdaptiveAvgPool2d(output_size=(1, 1)) # 64 x 4 x 4 -> 64 x 1 x 1
         self.flat = nn.Flatten() # 64 x 1 x 1 -> 64
 
-    def _featurize(self, x: Tensor) -> Tensor:
+        self.fc1 = nn.Sequential(
+            nn.Linear(4 * 64, 32),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+
+        self.fc2 = nn.Sequential(
+            nn.Linear(32, 16),
+            nn.ReLU(),
+            nn.Dropout(0.2)
+        )
+
+        self.out = nn.Linear(16, 1)
+
+    def _embed(self, x: Tensor) -> Tensor:
         x = self.cnn_block1(x)
         x = self.cnn_block2(x)
         x = self.cnn_block3(x)
@@ -42,16 +57,26 @@ class ImagePairMatcher(nn.Module):
         return self.flat(x)
 
     def forward(self, x1: Tensor, x2: Tensor) -> Tensor:
-        features1 = self._featurize(x1)
-        features2 = self._featurize(x2)
-        return F.cosine_similarity(features1, features2)
-    
-    def predict(self, x1: Tensor, x2: Tensor) -> bool:
-        logit = self.forward(x1, x2)
-        prob = sigmoid(logit.item())
-        return prob >= 0.5
+        features1 = self._embed(x1)
+        features2 = self._embed(x2)
+        difference = features1 - features2
+        difference = torch.abs(difference)
+        hadamard = features1 * features2
+        x = torch.concat([features1, features2, difference, hadamard], dim=-1)
+        x = self.fc1(x)
+        x = self.fc2(x)
+        return self.out(x)
+
+    def predict(self, x1: Tensor, x2: Tensor, threshold: float = 0.5) -> bool:
+        return F.sigmoid(self.forward(x1, x2)) >= threshold
 
     @staticmethod
     def from_config(config: Config) -> Self:
         model = ImagePairMatcher(config) # TODO...
         return model
+
+'''
+TODO:
+Turn magic values into variables
+Populate from_config with code to set variables based on config values
+'''

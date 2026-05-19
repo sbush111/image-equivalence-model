@@ -7,11 +7,14 @@ from torchvision.transforms.functional import to_pil_image
 
 class ImageDataset(torch.utils.data.Dataset):
 
-    def __init__(self, split: str, transform: T):
+    def __init__(self, split: str, transform: T.Transform | None = None):
 
         if split not in ['train', 'test']:
             raise Exception('"split" parameter must be either "train" or "test"')
 
+        if transform is None:
+            transform = T.ToTensor()
+        
         self.data = CIFAR100(root='data', train=(split=='train'), transform=transform)
 
 
@@ -38,17 +41,9 @@ class ImageDataset(torch.utils.data.Dataset):
     def __len__(self) -> int:
         return len(self.data)
 
-transform = T.Compose([
-    T.ToTensor()
-])
-
-data = ImageDataset(split='train', transform=transform)
-
-first, second, target = data[0]
-
-first = to_pil_image(first)
-second = to_pil_image(second)
-
-first.show()
-second.show()
-print(target)
+if __name__ == '__main__':
+    data = ImageDataset(split='train')
+    first, second, target = data[0]
+    print('Equal' if target == 1.0 else 'Different')
+    to_pil_image(first).show()
+    to_pil_image(second).show()

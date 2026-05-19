@@ -5,7 +5,7 @@ from torchvision.datasets import CIFAR100
 from torchvision.transforms import v2 as T
 from torchvision.transforms.functional import to_pil_image
 
-class ImageDataset(torch.utils.data.Dataset):
+class ImagePairDataset(torch.utils.data.Dataset):
 
     def __init__(self, split: str, transform: T.Transform | None = None):
 

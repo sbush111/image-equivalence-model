@@ -15,7 +15,18 @@ class Config:
     TRANSFORM_HUE: Optional[float] = None
     TRANSFORM_BLUR: Optional[float] = None
     TRANSFORM_NOISE: float = 0.0
+
+    # Model Architecture
+    CNN_HIDDEN_CHANNELS_1: int = 16
+    CNN_HIDDEN_CHANNELS_2: int = 32
+    CNN_OUT_CHANNELS: int = 64
+    CNN_DROPOUT: float = 0.0
+
+    FC_HIDDEN_1: int = 32
+    FC_HIDDEN_2: int = 16
+    FC_DROPOUT: float = 0.0
     
+    # Training
     LEARNING_RATE: float = 0.001
 
     # TODO ...

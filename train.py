@@ -69,3 +69,32 @@ def train(model: Module,
         validate_losses.append(validate_loss / len(validate_loader.dataset))
 
     return TrainResults(train_losses, validate_losses)
+
+@dataclass
+class TestResults:
+    test_loss: float
+
+def test(model: Module, 
+         criterion: Loss, 
+         test_loader: DataLoader, 
+         device: Optional[Device] = None) -> TestResults:
+
+    if device is None:
+        device = Device('cpu')
+
+    model = model.to(device)
+
+    test_loss = 0.0
+
+    model.eval()
+    
+    with torch.no_grad():
+
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)
+            outputs = model(inputs)
+            loss = criterion(outputs, labels)
+            batch_size = inputs.size(0)
+            test_loss += loss.item() * batch_size
+
+    return TestResults(test_loss / len(test_loader.dataset))

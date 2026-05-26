@@ -75,7 +75,7 @@ def _run_epoch(mode: Literal['train', 'eval'],
                device: Device, 
                optimizer: Optional[Optimizer] = None) -> float:
 
-    if mode is not in ['train', 'eval']:
+    if mode not in ['train', 'eval']:
         raise ValueError('"mode" parameter must be either "train" or "eval"')
     
     if mode == 'train' and optimizer is None:

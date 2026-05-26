@@ -18,7 +18,7 @@ class ImagePairMatcher(nn.Module):
         cnn_hidden_layers = [3] + cnn_hidden_layers
         for layer_in, layer_out in zip(cnn_hidden_layers[:-1], cnn_hidden_layers[1:]):
             cnn_block = nn.Sequential(
-                nn.Conv2d(in_channels=layer_in, out_channels = layer_out, kernel_size=3, padding=1),
+                nn.Conv2d(in_channels=layer_in, out_channels = layer_out, kernel_size=3, padding=1, bias=False,
                 nn.BatchNorm2d(num_features=layer_out),
                 nn.ReLU(),
                 nn.MaxPool2d(kernel_size=2, stride=2),
@@ -61,10 +61,10 @@ class ImagePairMatcher(nn.Module):
     def predict(self, x1: Tensor, x2: Tensor, threshold: float = 0.5) -> Tensor:
         return torch.sigmoid(self.forward(x1, x2)) >= threshold
 
-'''
-TODO:
     @staticmethod
     def from_config(config: Config) -> Self:
-        model = ImagePairMatcher(config) #TODO
+        model = ImagePairMatcher(cnn_hidden_layers=[config.CNN_HIDDEN_CHANNELS_1, config.CNN_HIDDEN_CHANNELS_2, config.CNN_OUT_CHANNELS],
+                                 fc_hidden_layers=[config.FC_HIDDEN_1, config.FC_HIDDEN_2],
+                                 cnn_dropout=config.CNN_DROPOUT,
+                                 fc_dropout=config.FC_DROPOUT)
         return model
-'''

@@ -18,7 +18,7 @@ class ImagePairMatcher(nn.Module):
         cnn_hidden_layers = [3] + cnn_hidden_layers
         for layer_in, layer_out in zip(cnn_hidden_layers[:-1], cnn_hidden_layers[1:]):
             cnn_block = nn.Sequential(
-                nn.Conv2d(in_channels=layer_in, out_channels = layer_out, kernel_size=3, padding=1, bias=False,
+                nn.Conv2d(in_channels=layer_in, out_channels = layer_out, kernel_size=3, padding=1, bias=False),
                 nn.BatchNorm2d(num_features=layer_out),
                 nn.ReLU(),
                 nn.MaxPool2d(kernel_size=2, stride=2),

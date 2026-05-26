@@ -1,3 +1,4 @@
+from contextlib import nullcontext
 from dataclasses import dataclass
 import torch
 from torch.nn import Module
@@ -6,7 +7,8 @@ from torch.nn.modules.loss import _Loss as Loss
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from typing import Optional
+from typing import Literal, Optional
+
 
 @dataclass
 class TrainResults:
@@ -36,39 +38,17 @@ def train(model: Module,
     
     for epoch in iterator:
 
-        train_loss = 0.0
-        model.train()
-
-        for inputs, labels in train_loader:
-            optimizer.zero_grad()
-            inputs, labels = inputs.to(device), labels.to(device)
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
-            loss.backward()
-            optimizer.step()
-            batch_size = inputs.size(0)
-            train_loss += loss.item() * batch_size
-
-        train_losses.append(train_loss / len(train_loader.dataset))
+        train_loss = _run_epoch('train', model, criterion, train_loader, device, optimizer)
+        train_losses.append(train_loss)
 
         if validate_loader is None:
             continue
 
-        validate_loss = 0.0
-        model.eval()
-
-        with torch.no_grad():
-
-            for inputs, labels in validate_loader:
-                inputs, labels = inputs.to(device), labels.to(device)
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                batch_size = inputs.size(0)
-                validate_loss += loss.item() * batch_size
-
-        validate_losses.append(validate_loss / len(validate_loader.dataset))
+        validate_loss = _run_epoch(mode='eval', model, criterion, validate_loader, device)
+        validate_losses.append(validate_loss)
 
     return TrainResults(train_losses, validate_losses)
+
 
 @dataclass
 class TestResults:
@@ -84,17 +64,44 @@ def test(model: Module,
 
     model = model.to(device)
 
-    test_loss = 0.0
+    test_loss = _run_epoch(mode='eval', model, criterion, test_loader, device)
+    return TestResults(test_loss)
 
-    model.eval()
+
+def _run_epoch(mode: Literal['train', 'eval'], 
+               model: Module, 
+               criterion: Loss, 
+               loader: DataLoader, 
+               device: Device, 
+               optimizer: Optional[Optimizer] = None) -> float:
+
+    if mode is not in ['train', 'eval']:
+        raise ValueError('"mode" parameter must be either "train" or "eval"')
     
-    with torch.no_grad():
+    if mode == 'train' and optimizer is None:
+        raise ValueError('Optimizer must be provided in train mode')
 
-        for inputs, labels in test_loader:
+    if mode == 'train':
+        model.train()
+
+    if mode == 'eval':
+        model.eval()
+
+    running_loss = 0.0
+
+    with torch.no_grad() if mode == 'eval' else nullcontext():
+
+        for inputs, labels in loader:
+            if mode == 'train':
+                optimizer.zero_grad()
             inputs, labels = inputs.to(device), labels.to(device)
             outputs = model(inputs)
             loss = criterion(outputs, labels)
             batch_size = inputs.size(0)
-            test_loss += loss.item() * batch_size
+            running_loss += loss.item() * batch_size
+            if mode == 'eval':
+                continue
+            loss.backward()
+            optimizer.step()
 
-    return TestResults(test_loss / len(test_loader.dataset))
+    return running_loss / len(loader.dataset)

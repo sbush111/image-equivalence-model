@@ -44,7 +44,7 @@ def train(model: Module,
         if validate_loader is None:
             continue
 
-        validate_loss = _run_epoch(mode='eval', model, criterion, validate_loader, device)
+        validate_loss = _run_epoch('eval', model, criterion, validate_loader, device)
         validate_losses.append(validate_loss)
 
     return TrainResults(train_losses, validate_losses)
@@ -64,7 +64,7 @@ def test(model: Module,
 
     model = model.to(device)
 
-    test_loss = _run_epoch(mode='eval', model, criterion, test_loader, device)
+    test_loss = _run_epoch('eval', model, criterion, test_loader, device)
     return TestResults(test_loss)
 
 

@@ -30,7 +30,7 @@ class ImagePairDataset(torch.utils.data.Dataset):
         if same:
             second_index = index
         else:
-            second_index = rng.randint(0, len(self.data)-1)
+            second_index = rng.randrange(0, len(self.data)-1)
             if second_index >= index:
                 second_index += 1
 

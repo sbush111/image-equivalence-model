@@ -1,6 +1,7 @@
 import PIL
 import random as rng
 import torch
+from torch.utils.data import Subset
 from torchvision.datasets import CIFAR100
 from torchvision.transforms import v2 as T
 from torchvision.transforms.functional import to_pil_image
@@ -9,7 +10,7 @@ class ImagePairDataset(torch.utils.data.Dataset):
 
     def __init__(self, split: str, transform: T.Transform | None = None):
 
-        if split not in ['train', 'test']:
+        if split not in ['train', 'validate', 'test']:
             raise Exception('"split" parameter must be either "train" or "test"')
 
         if transform is None:
@@ -17,8 +18,17 @@ class ImagePairDataset(torch.utils.data.Dataset):
                 T.ToImage(), 
                 T.ToDtype(torch.float32, scale=True)
             ])
-        
-        self.data = CIFAR100(root='data', train=(split=='train'), transform=transform)
+
+        if split == 'test':
+            self.data = CIFAR100(root='data', train=False, transform=transform)
+            return
+
+        self.data = CIFAR100(root='data', train=True, transform=transform)
+
+        if split == 'train':
+            self.data = Subset(self.data, range(40000))
+        else:
+            self.data = Subset(self.data, range(40000, 50000))
 
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:

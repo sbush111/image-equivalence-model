@@ -32,20 +32,22 @@ def train(model: Module,
     train_losses = []
     validate_losses = [] if validate_loader is not None else None
 
-    iterator = range(num_epochs)
-    if progress:
-        iterator = tqdm(iterator)
+    num_batches = len(train_loader)
+    if validate_loader is not None:
+        num_batches += len(validate_loader)
+
+    with (tqdm(desc='train batches', total=num_epochs*num_batches) if progress else nullcontext()) as progress_bar:
+
+        for _ in range(num_epochs):
+
+            train_loss = _run_epoch('train', model, criterion, train_loader, device, optimizer, progress_bar=(progress_bar if progress else None))
+            train_losses.append(train_loss)
     
-    for epoch in iterator:
-
-        train_loss = _run_epoch('train', model, criterion, train_loader, device, optimizer)
-        train_losses.append(train_loss)
-
-        if validate_loader is None:
-            continue
-
-        validate_loss = _run_epoch('eval', model, criterion, validate_loader, device)
-        validate_losses.append(validate_loss)
+            if validate_loader is None:
+                continue
+    
+            validate_loss = _run_epoch('eval', model, criterion, validate_loader, device, progress_bar=(progress_bar if progress else None))
+            validate_losses.append(validate_loss)
 
     return TrainResults(train_losses, validate_losses)
 
@@ -57,14 +59,17 @@ class TestResults:
 def test(model: Module, 
          criterion: Loss, 
          test_loader: DataLoader, 
-         device: Optional[Device] = None) -> TestResults:
+         device: Optional[Device] = None,
+         progress: bool = False) -> TestResults:
 
     if device is None:
         device = Device('cpu')
 
     model = model.to(device)
 
-    test_loss = _run_epoch('eval', model, criterion, test_loader, device)
+    with (tqdm(desc='test batches', total=len(test_loader)) if progress else nullcontext()) as progress_bar:
+        test_loss = _run_epoch('eval', model, criterion, test_loader, device, progress_bar=(progress_bar if progress else None))
+        
     return TestResults(test_loss)
 
 
@@ -73,7 +78,8 @@ def _run_epoch(mode: Literal['train', 'eval'],
                criterion: Loss, 
                loader: DataLoader, 
                device: Device, 
-               optimizer: Optional[Optimizer] = None) -> float:
+               optimizer: Optional[Optimizer] = None,
+               progress_bar: Optional[tqdm] = None) -> float:
 
     if mode not in ['train', 'eval']:
         raise ValueError('"mode" parameter must be either "train" or "eval"')
@@ -99,6 +105,8 @@ def _run_epoch(mode: Literal['train', 'eval'],
             loss = criterion(outputs, labels)
             batch_size = firsts.size(0)
             running_loss += loss.item() * batch_size
+            if progress_bar is not None:
+                progress_bar.update()
             if mode == 'eval':
                 continue
             loss.backward()

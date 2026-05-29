@@ -13,7 +13,10 @@ class ImagePairDataset(torch.utils.data.Dataset):
             raise Exception('"split" parameter must be either "train" or "test"')
 
         if transform is None:
-            transform = T.ToTensor()
+            transform = T.Compose([
+                T.ToImage(), 
+                T.ToDtype(torch.float32, scale=True)
+            ])
         
         self.data = CIFAR100(root='data', train=(split=='train'), transform=transform)
 

@@ -51,8 +51,9 @@ if __name__ == '__main__':
 
     print('Loading data...')
     transform = get_transform()
-    train_and_validate = CIFAR100(root='data', train=True, download=True, transform=transform)
-    test = CIFAR100(root='data', train=False, download=True, transform=transform)
+    os.makedirs('cifar', exist_ok=True)
+    train_and_validate = CIFAR100(root='cifar', train=True, download=True, transform=transform)
+    test = CIFAR100(root='cifar', train=False, download=True, transform=transform)
     print('Complete.')
     
     data = {}
@@ -70,19 +71,8 @@ if __name__ == '__main__':
     print('Complete.')
 
     print('\nSaving data...')
-    os.makedirs('data/preprocessed', exist_ok=True)
+    os.makedirs('../data', exist_ok=True)
     for name in data:
         array = data[name]
-        np.save(f'data/preprocessed/{name}.npy', array, allow_pickle=False)
+        np.save(f'../data/{name}.npy', array, allow_pickle=False)
     print('Complete.')
-
-    # Debug
-    name = 'train_firsts'
-    array = data[name]
-    print()
-    print(name)
-    print(type(array))
-    print(array.dtype)
-    print(array.shape)
-    print()
-    print(array)

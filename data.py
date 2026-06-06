@@ -6,9 +6,9 @@ class ImagePairDataset(torch.utils.data.Dataset):
     def __init__(self, split: str):
         if split not in ['train', 'validate', 'test']:
             raise Exception('"split" parameter must be either "train", "validate", or "test"')
-        self.firsts = np.load(f'data/preprocessed/{split}_firsts.npy', mmap_mode='r')
-        self.seconds = np.load(f'data/preprocessed/{split}_seconds.npy', mmap_mode='r')
-        self.targets = np.load(f'data/preprocessed/{split}_targets.npy', mmap_mode='r')
+        self.firsts = np.load(f'data/{split}_firsts.npy', mmap_mode='r')
+        self.seconds = np.load(f'data/{split}_seconds.npy', mmap_mode='r')
+        self.targets = np.load(f'data/{split}_targets.npy', mmap_mode='r')
 
     def __getitem__(self, index: int) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         return torch.tensor(self.firsts[index]), torch.tensor(self.seconds[index]), torch.tensor(self.targets[index])

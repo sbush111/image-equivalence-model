@@ -4,18 +4,6 @@ from typing import Any, Optional, Self
 @dataclass
 class Config:
 
-    # Transforms
-    TRANSFORM_ROTATION: Optional[float] = None
-    TRANSFORM_TRANSLATE: Optional[float] = None
-    TRANSFORM_SCALE: Optional[float] = None
-    TRANSFORM_FLIP: bool = False
-    TRANSFORM_BRIGHTNESS: Optional[float] = None
-    TRANSFORM_SATURATION: Optional[float] = None
-    TRANSFORM_CONTRAST: Optional[float] = None
-    TRANSFORM_HUE: Optional[float] = None
-    TRANSFORM_BLUR: Optional[float] = None
-    TRANSFORM_NOISE: Optional[float] = None
-
     # Model Architecture
     CNN_HIDDEN_CHANNELS_1: int = 16
     CNN_HIDDEN_CHANNELS_2: int = 32

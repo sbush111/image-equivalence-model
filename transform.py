@@ -1,41 +1,44 @@
-from config import Config
-from torchvision.transforms import v2 as T
-from typing import Optional
 import torch
+from torchvision.transforms import v2 as T
 
-def generate_transform(config: Config) -> T.Transform:
-
-    def jitter_to_range(jitter: Optional[float], base: float = 0.0) -> tuple[float, float]:
-        if jitter is None:
-            return None
-        return (base - jitter, base + jitter)
+def get_transform(to_tensor: bool = True,
+                  rotation: int | float = 180,
+                  translate: float = 0.2,
+                  scale: float = 0.2,
+                  flip: bool = True,
+                  brightness: float = 0.2,
+                  saturation: float = 0.2,
+                  contrast: float = 0.2,
+                  hue: float = 0.2,
+                  blur: float | None = 0.1,
+                  noise: float | None = 0.05) -> T.Transform:
 
     transforms = []
 
-    transforms.append(T.ToImage())
-    transforms.append(T.ToDtype(torch.float32, scale=True))
+    if to_tensor is True:
+        transforms.append(T.ToImage())
+        transforms.append(T.ToDtype(torch.float32, scale=True))
 
-    transforms.append(T.RandomAffine(degrees=config.TRANSFORM_ROTATION or 0,
-                                    translate=(config.TRANSFORM_TRANSLATE, config.TRANSFORM_TRANSLATE),
-                                    scale=jitter_to_range(config.TRANSFORM_SCALE, base=1.0),
-                                    interpolation=T.InterpolationMode.BILINEAR))
+    transforms.append(T.RandomAffine(degrees=rotation, 
+                                     translate=(translate, translate),
+                                     scale=(1 - scale, 1 + scale),
+                                     interpolation=T.InterpolationMode.BILINEAR))
 
-    if config.TRANSFORM_FLIP == True:
+    if flip is True:
         transforms.append(T.RandomHorizontalFlip())
 
-    transforms.append(T.ColorJitter(brightness=config.TRANSFORM_BRIGHTNESS,
-                     contrast=config.TRANSFORM_CONTRAST,
-                     saturation=config.TRANSFORM_SATURATION,
-                     hue=config.TRANSFORM_HUE))
+    transforms.append(T.ColorJitter(brightness=brightness,
+                                    saturation=saturation,
+                                    contrast=contrast,
+                                    hue=hue))
 
-    if config.TRANSFORM_BLUR is not None:
-        transforms.append(T.GaussianBlur(kernel_size=5, sigma=(0.0001, config.TRANSFORM_BLUR)))
+    if blur is not None:
+        transforms.append(T.GaussianBlur(kernel_size=5, sigma=(0.0001, blur)))
 
-    if config.TRANSFORM_NOISE is not None:
-        transforms.append(T.GaussianNoise(mean=0, sigma=config.TRANSFORM_NOISE))
+    if noise is not None:
+        transforms.append(T.GaussianNoise(mean=5, sigma=noise))
 
     return T.Compose(transforms)
 
 if __name__ == '__main__':
-    transform = generate_transform(Config())
-    print(transform)
+    print(get_transform())

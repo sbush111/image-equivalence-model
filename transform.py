@@ -9,7 +9,7 @@ def get_transform(to_tensor: bool = True,
                   brightness: float = 0.2,
                   saturation: float = 0.2,
                   contrast: float = 0.2,
-                  hue: float = 0.2,
+                  hue: float = 0.05,
                   blur: float | None = 0.1,
                   noise: float | None = 0.05) -> T.Transform:
 
@@ -36,7 +36,7 @@ def get_transform(to_tensor: bool = True,
         transforms.append(T.GaussianBlur(kernel_size=5, sigma=(0.0001, blur)))
 
     if noise is not None:
-        transforms.append(T.GaussianNoise(mean=5, sigma=noise))
+        transforms.append(T.GaussianNoise(mean=0, sigma=noise))
 
     return T.Compose(transforms)
 

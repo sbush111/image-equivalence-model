@@ -14,7 +14,7 @@ class Config:
     TRANSFORM_CONTRAST: Optional[float] = None
     TRANSFORM_HUE: Optional[float] = None
     TRANSFORM_BLUR: Optional[float] = None
-    TRANSFORM_NOISE: float = 0.0
+    TRANSFORM_NOISE: Optional[float] = None
 
     # Model Architecture
     CNN_HIDDEN_CHANNELS_1: int = 16

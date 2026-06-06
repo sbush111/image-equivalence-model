@@ -16,8 +16,9 @@ def generate_transform(config: Config) -> T.Transform:
     transforms.append(T.ToDtype(torch.float32, scale=True))
 
     transforms.append(T.RandomAffine(degrees=config.TRANSFORM_ROTATION or 0,
-                                    translate=jitter_to_range(config.TRANSFORM_TRANSLATE),
-                                    scale=jitter_to_range(config.TRANSFORM_SCALE, base=1.0)))
+                                    translate=(config.TRANSFORM_TRANSLATE, config.TRANSFORM_TRANSLATE),
+                                    scale=jitter_to_range(config.TRANSFORM_SCALE, base=1.0),
+                                    interpolation=T.InterpolationMode.BILINEAR))
 
     if config.TRANSFORM_FLIP == True:
         transforms.append(T.RandomHorizontalFlip())
@@ -28,7 +29,7 @@ def generate_transform(config: Config) -> T.Transform:
                      hue=config.TRANSFORM_HUE))
 
     if config.TRANSFORM_BLUR is not None:
-        transforms.append(T.GaussianBlur(kernel_size=5, sigma=(0.0, config.TRANSFORM_BLUR)))
+        transforms.append(T.GaussianBlur(kernel_size=5, sigma=(0.0001, config.TRANSFORM_BLUR)))
 
     if config.TRANSFORM_NOISE is not None:
         transforms.append(T.GaussianNoise(mean=0, sigma=config.TRANSFORM_NOISE))

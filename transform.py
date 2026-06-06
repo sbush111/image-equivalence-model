@@ -10,8 +10,8 @@ def get_transform(to_tensor: bool = True,
                   saturation: float = 0.2,
                   contrast: float = 0.2,
                   hue: float = 0.05,
-                  blur: float | None = 0.1,
-                  noise: float | None = 0.05) -> T.Transform:
+                  blur: float | None = 0.2,
+                  noise: float | None = 0.02) -> T.Transform:
 
     transforms = []
 

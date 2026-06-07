@@ -1,3 +1,4 @@
+from config import Config
 from contextlib import nullcontext
 from dataclasses import dataclass
 import torch
@@ -7,8 +8,46 @@ from torch.nn.modules.loss import _Loss as Loss
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from typing import Literal, Optional
+from typing import Literal, Optional, Self
 
+class EarlyStopper:
+    
+    def __init__(self, patience: int, delta: float):
+        self.patience = patience
+        self.countdown = patience
+        self.delta = delta
+        self.best = float('inf')
+
+    def consider_stop(self, validation: float) -> bool:
+        if self.best - validation > self.delta:
+            self.countdown = self.patience
+            self.best = validation
+        else:
+            self.countdown -= 1
+        return self.countdown <= 0
+
+    def __str__(self) -> str:
+        out = []
+        out.append('EarlyStopper')
+        out.append('============')
+        out.append(f'patience={self.patience}')
+        out.append(f'delta={round(self.patience, 3)}')
+        out.append('------------')
+        out.append(f'current_countdown={self.countdown}')
+        out.append(f'current_best_val={self.best}')
+        return '\n'.join(out)
+
+    def __repr__(self) -> str:
+        return self.__str__()
+
+    @staticmethod
+    def from_config(config: Config) -> Self | None:
+        if (config.PATIENCE is None) != (config.DELTA is None):
+            raise ValueError('Cannot determine early stopping criteria. PATIENCE and DELTA must both be None or neither be None.')
+        if config.PATIENCE is None:
+            return None
+        return EarlyStopper(config.PATIENCE, config.DELTA)
+        
 
 @dataclass
 class TrainResults:
@@ -20,35 +59,30 @@ def train(model: Module,
           optimizer: Optimizer,
           num_epochs: int,
           train_loader: DataLoader,  
-          validate_loader: Optional[DataLoader] = None,
-          device: Optional[Device] = None,
-          progress: bool = False) -> TrainResults:
-
-    if device is None:
-        device = Device('cpu')
+          validate_loader: DataLoader,
+          device: Device,
+          early_stop: Optional[EarlyStopper] = None) -> TrainResults:
 
     model = model.to(device)
 
     train_losses = []
-    validate_losses = [] if validate_loader is not None else None
+    validate_losses = []
+    best_validate_loss = float('inf')
 
-    num_batches = len(train_loader)
-    if validate_loader is not None:
-        num_batches += len(validate_loader)
-
-    with (tqdm(desc='train batches', total=num_epochs*num_batches) if progress else nullcontext()) as progress_bar:
+    batches_per_epoch = len(train_loader) + len(validate_loader)
+    with tqdm(desc='train batches', total=num_epochs*batches_per_epoch) as progress_bar:
 
         for _ in range(num_epochs):
 
-            train_loss = _run_epoch('train', model, criterion, train_loader, device, optimizer, progress_bar=(progress_bar if progress else None))
+            train_loss = _run_epoch('train', model, criterion, train_loader, device, progress_bar, optimizer)
+            validate_loss = _run_epoch('eval', model, criterion, validate_loader, device, progress_bar)
+            
             train_losses.append(train_loss)
-    
-            if validate_loader is None:
-                continue
-    
-            validate_loss = _run_epoch('eval', model, criterion, validate_loader, device, progress_bar=(progress_bar if progress else None))
             validate_losses.append(validate_loss)
 
+            if early_stop and early_stop.consider_stop(validate_loss):
+                break
+                
     return TrainResults(train_losses, validate_losses)
 
 
@@ -59,16 +93,15 @@ class TestResults:
 def test(model: Module, 
          criterion: Loss, 
          test_loader: DataLoader, 
-         device: Optional[Device] = None,
-         progress: bool = False) -> TestResults:
+         device: Optional[Device] = None) -> TestResults:
 
     if device is None:
         device = Device('cpu')
 
     model = model.to(device)
 
-    with (tqdm(desc='test batches', total=len(test_loader)) if progress else nullcontext()) as progress_bar:
-        test_loss = _run_epoch('eval', model, criterion, test_loader, device, progress_bar=(progress_bar if progress else None))
+    with tqdm(desc='test batches', total=len(test_loader)) as progress_bar:
+        test_loss = _run_epoch('eval', model, criterion, test_loader, device, progress_bar)
         
     return TestResults(test_loss)
 
@@ -77,9 +110,9 @@ def _run_epoch(mode: Literal['train', 'eval'],
                model: Module, 
                criterion: Loss, 
                loader: DataLoader, 
-               device: Device, 
-               optimizer: Optional[Optimizer] = None,
-               progress_bar: Optional[tqdm] = None) -> float:
+               device: Device,
+               progress_bar: tqdm,
+               optimizer: Optional[Optimizer] = None) -> float:
 
     if mode not in ['train', 'eval']:
         raise ValueError('"mode" parameter must be either "train" or "eval"')
@@ -95,7 +128,7 @@ def _run_epoch(mode: Literal['train', 'eval'],
 
     running_loss = 0.0
 
-    with torch.no_grad() if mode == 'eval' else nullcontext():
+    with torch.inference_mode() if mode == 'eval' else nullcontext():
 
         for firsts, lasts, labels in loader:
             if mode == 'train':
@@ -105,8 +138,7 @@ def _run_epoch(mode: Literal['train', 'eval'],
             loss = criterion(outputs, labels)
             batch_size = firsts.size(0)
             running_loss += loss.item() * batch_size
-            if progress_bar is not None:
-                progress_bar.update()
+            progress_bar.update()
             if mode == 'eval':
                 continue
             loss.backward()

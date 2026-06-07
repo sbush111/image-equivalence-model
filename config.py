@@ -16,6 +16,8 @@ class Config:
     
     # Training
     LEARNING_RATE: float = 0.001
+    PATIENCE: int = 5
+    DELTA: float = 1e-3
 
     # TODO ...
     

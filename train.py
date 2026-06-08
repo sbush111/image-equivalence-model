@@ -1,14 +1,32 @@
 from config import Config
 from contextlib import nullcontext
+from data import ImagePairDataset
+from dataclasses import dataclass
+from model import ImagePairMatcher
+import torch
+from torch import device as Device
+from torch import nn
+from torch import optim
+from torch.nn import Module
+from torch.nn.modules.loss import _Loss as Loss
+from torch.optim import Optimizer
+from torch.utils.data import DataLoader
+from tqdm import tqdm
+from typing import Self, Optional, Literal
+
+'''
+from config import Config
+from contextlib import nullcontext
+from data import ImagePairMatcher
 from dataclasses import dataclass
 import torch
 from torch.nn import Module
 from torch import device as Device
 from torch.nn.modules.loss import _Loss as Loss
-from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from typing import Literal, Optional, Self
+'''
 
 class EarlyStopper:
     
@@ -154,3 +172,33 @@ def _run_epoch(mode: Literal['train', 'eval'],
             optimizer.step()
 
     return running_loss / len(loader.dataset), float(correct) / len(loader.dataset)
+
+    
+@dataclass
+class PipelineResults:
+    train_results: TrainResults
+    model: Module
+    criterion: Loss
+    optimizer: Optimizer
+    device: Device
+    early_stop: EarlyStopper
+    
+def run_pipeline(config: Config) -> TrainResults:
+    
+    model = ImagePairMatcher.from_config(config)
+    criterion = nn.BCEWithLogitsLoss()
+    optimizer = optim.Adam(model.parameters(), 
+                           lr=config.LEARNING_RATE, 
+                           weight_decay=config.WEIGHT_DECAY)
+    device = torch.device('cuda')
+    early_stop = EarlyStopper.from_config(config)
+
+    train_data = ImagePairDataset(split='train')
+    validate_data = ImagePairDataset(split='validate')
+    
+    train_loader = DataLoader(train_data, batch_size=128, shuffle=True, num_workers=4, persistent_workers=True)
+    validate_loader = DataLoader(validate_data, batch_size=128, num_workers=4, persistent_workers=True)
+
+    train_results = train(model, criterion, optimizer, config.NUM_EPOCHS, train_loader, validate_loader, device, early_stop)
+
+    return PipelineResults(train_results, model, criterion, optimizer, device, early_stop)

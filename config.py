@@ -17,6 +17,8 @@ class Config:
     FC_DROPOUT: float = 0.0
     
     # Training
+    NUM_EPOCHS: int = 20
+    
     LEARNING_RATE: float = 0.001
     WEIGHT_DECAY: float = 0.0
     

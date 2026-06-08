@@ -52,7 +52,9 @@ class EarlyStopper:
 @dataclass
 class TrainResults:
     train_losses: list[float]
-    validate_losses: Optional[list[float]]
+    train_accuracies: list[float]
+    validate_losses: list[float]
+    validate_accuracies: list[float]
     
 def train(model: Module, 
           criterion: Loss, 
@@ -66,7 +68,9 @@ def train(model: Module,
     model = model.to(device)
 
     train_losses = []
+    train_accuracies = []
     validate_losses = []
+    validate_accuracies = []
     best_validate_loss = float('inf')
 
     batches_per_epoch = len(train_loader) + len(validate_loader)
@@ -74,21 +78,24 @@ def train(model: Module,
 
         for _ in range(num_epochs):
 
-            train_loss = _run_epoch('train', model, criterion, train_loader, device, progress_bar, optimizer)
-            validate_loss = _run_epoch('eval', model, criterion, validate_loader, device, progress_bar)
+            train_loss, train_accuracy = _run_epoch('train', model, criterion, train_loader, device, progress_bar, optimizer)
+            validate_loss, validate_accuracy = _run_epoch('eval', model, criterion, validate_loader, device, progress_bar)
             
             train_losses.append(train_loss)
+            train_accuracies.append(train_accuracy)
             validate_losses.append(validate_loss)
+            validate_accuracies.append(validate_accuracy)
 
             if early_stop and early_stop.consider_stop(validate_loss):
                 break
                 
-    return TrainResults(train_losses, validate_losses)
+    return TrainResults(train_losses, train_accuracies, validate_losses, validate_accuracies)
 
 
 @dataclass
 class TestResults:
     test_loss: float
+    test_accuracy: float
 
 def test(model: Module, 
          criterion: Loss, 
@@ -101,9 +108,9 @@ def test(model: Module,
     model = model.to(device)
 
     with tqdm(desc='test batches', total=len(test_loader)) as progress_bar:
-        test_loss = _run_epoch('eval', model, criterion, test_loader, device, progress_bar)
+        test_loss, test_accuracy = _run_epoch('eval', model, criterion, test_loader, device, progress_bar)
         
-    return TestResults(test_loss)
+    return TestResults(test_loss, test_accuracy)
 
 
 def _run_epoch(mode: Literal['train', 'eval'], 
@@ -112,7 +119,7 @@ def _run_epoch(mode: Literal['train', 'eval'],
                loader: DataLoader, 
                device: Device,
                progress_bar: tqdm,
-               optimizer: Optional[Optimizer] = None) -> float:
+               optimizer: Optional[Optimizer] = None) -> tuple[float, float]:
 
     if mode not in ['train', 'eval']:
         raise ValueError('"mode" parameter must be either "train" or "eval"')
@@ -127,6 +134,7 @@ def _run_epoch(mode: Literal['train', 'eval'],
         model.eval()
 
     running_loss = 0.0
+    correct = 0
 
     with torch.inference_mode() if mode == 'eval' else nullcontext():
 
@@ -136,6 +144,7 @@ def _run_epoch(mode: Literal['train', 'eval'],
             firsts, lasts, labels = firsts.to(device), lasts.to(device), labels.to(device)
             outputs = model(firsts, lasts)
             loss = criterion(outputs, labels)
+            correct += ((outputs >= 0.5) == labels).sum().item()
             batch_size = firsts.size(0)
             running_loss += loss.item() * batch_size
             progress_bar.update()
@@ -144,4 +153,4 @@ def _run_epoch(mode: Literal['train', 'eval'],
             loss.backward()
             optimizer.step()
 
-    return running_loss / len(loader.dataset)
+    return running_loss / len(loader.dataset), float(correct) / len(loader.dataset)

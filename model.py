@@ -61,6 +61,9 @@ class ImagePairMatcher(nn.Module):
     def predict(self, x1: Tensor, x2: Tensor, threshold: float = 0.5) -> Tensor:
         return torch.sigmoid(self.forward(x1, x2)) >= threshold
 
+    def parameter_count(self) -> int:
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
+
     @staticmethod
     def from_config(config: Config) -> Self:
         model = ImagePairMatcher(cnn_hidden_layers=[config.CNN_HIDDEN_CHANNELS_1, config.CNN_HIDDEN_CHANNELS_2, config.CNN_OUT_CHANNELS],

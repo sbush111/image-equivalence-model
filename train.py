@@ -3,6 +3,7 @@ from contextlib import nullcontext
 from data import ImagePairDataset
 from dataclasses import dataclass
 from model import ImagePairMatcher
+from numpy.typing import ArrayLike
 import torch
 from torch import device as Device
 from torch import nn
@@ -202,3 +203,41 @@ def run_pipeline(config: Config) -> TrainResults:
     train_results = train(model, criterion, optimizer, config.NUM_EPOCHS, train_loader, validate_loader, device, early_stop)
 
     return PipelineResults(train_results, model, criterion, optimizer, device, early_stop)
+
+
+@dataclass
+class TuneResults:
+    best_config: Config
+    best_model: Module
+    best_score: float
+    best_train_results: TrainResults
+    scores: dict[Config, float]
+
+def randomized_search(param_grid: dict[str, ArrayLike], n: int) -> TuneResults:
+
+    best_config = None
+    best_model = None
+    best_score = None
+    best_train_results = None
+    scores = {}
+
+    for _ in tqdm(range(n)):
+        
+        config = Config.generate_randomized(param_grid)
+        results = run_pipeline(config)
+        
+        model = results.model
+        train_results = results.train_results
+        score = train_results.validate_losses[-1]
+
+        scores[config] = score
+
+        if best_score is not None and score >= best_score:
+            continue
+        
+        best_config = config
+        best_model = model
+        best_score = score
+        best_train_results = train_results
+
+    return TuneResults(best_config, best_model, best_score, train_results, scores)

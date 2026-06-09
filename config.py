@@ -26,7 +26,7 @@ class Config:
     DELTA: Optional[float] = None
     
     @staticmethod
-    def generate_config(param_grid: dict[str, ArrayLike], random_state: Optional[int] = None) -> Self:
+    def generate_randomized(param_grid: dict[str, ArrayLike], random_state: Optional[int] = None) -> Self:
         config = Config()
         rng = Random(random_state)
         for hyperparameter, options in param_grid.items():

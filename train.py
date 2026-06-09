@@ -82,7 +82,8 @@ def train(model: Module,
           train_loader: DataLoader,  
           validate_loader: DataLoader,
           device: Device,
-          early_stop: Optional[EarlyStopper] = None) -> TrainResults:
+          early_stop: Optional[EarlyStopper] = None,
+          progress: bool = True) -> TrainResults:
 
     model = model.to(device)
 
@@ -93,7 +94,7 @@ def train(model: Module,
     best_validate_loss = float('inf')
 
     batches_per_epoch = len(train_loader) + len(validate_loader)
-    with tqdm(desc='train batches', total=num_epochs*batches_per_epoch) as progress_bar:
+    with tqdm(desc='train batches', total=num_epochs*batches_per_epoch, disable=not progress) as progress_bar:
 
         for _ in range(num_epochs):
 
@@ -119,14 +120,15 @@ class TestResults:
 def test(model: Module, 
          criterion: Loss, 
          test_loader: DataLoader, 
-         device: Optional[Device] = None) -> TestResults:
+         device: Optional[Device] = None,
+         progress: bool = True) -> TestResults:
 
     if device is None:
         device = Device('cpu')
 
     model = model.to(device)
 
-    with tqdm(desc='test batches', total=len(test_loader)) as progress_bar:
+    with tqdm(desc='test batches', total=len(test_loader), disable=not progress) as progress_bar:
         test_loss, test_accuracy = _run_epoch('eval', model, criterion, test_loader, device, progress_bar)
         
     return TestResults(test_loss, test_accuracy)
@@ -184,7 +186,7 @@ class PipelineResults:
     device: Device
     early_stop: EarlyStopper
     
-def run_pipeline(config: Config) -> TrainResults:
+def run_pipeline(config: Config, progress: bool = True) -> TrainResults:
     
     model = ImagePairMatcher.from_config(config)
     criterion = nn.BCEWithLogitsLoss()
@@ -200,7 +202,7 @@ def run_pipeline(config: Config) -> TrainResults:
     train_loader = DataLoader(train_data, batch_size=128, shuffle=True, num_workers=4, persistent_workers=True)
     validate_loader = DataLoader(validate_data, batch_size=128, num_workers=4, persistent_workers=True)
 
-    train_results = train(model, criterion, optimizer, config.NUM_EPOCHS, train_loader, validate_loader, device, early_stop)
+    train_results = train(model, criterion, optimizer, config.NUM_EPOCHS, train_loader, validate_loader, device, early_stop, progress)
 
     return PipelineResults(train_results, model, criterion, optimizer, device, early_stop)
 
@@ -211,7 +213,7 @@ class TuneResults:
     best_model: Module
     best_score: float
     best_train_results: TrainResults
-    scores: dict[Config, float]
+    scores: dict[str, float]
 
 def randomized_search(param_grid: dict[str, ArrayLike], n: int) -> TuneResults:
 
@@ -224,13 +226,13 @@ def randomized_search(param_grid: dict[str, ArrayLike], n: int) -> TuneResults:
     for _ in tqdm(range(n)):
         
         config = Config.generate_randomized(param_grid)
-        results = run_pipeline(config)
+        results = run_pipeline(config, progress=False)
         
         model = results.model
         train_results = results.train_results
         score = train_results.validate_losses[-1]
 
-        scores[config] = score
+        scores[str(config)] = score
 
         if best_score is not None and score >= best_score:
             continue

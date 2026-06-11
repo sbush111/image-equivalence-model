@@ -15,20 +15,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from typing import Self, Optional, Literal
 
-'''
-from config import Config
-from contextlib import nullcontext
-from data import ImagePairMatcher
-from dataclasses import dataclass
-import torch
-from torch.nn import Module
-from torch import device as Device
-from torch.nn.modules.loss import _Loss as Loss
-from torch.utils.data import DataLoader
-from tqdm import tqdm
-from typing import Literal, Optional, Self
-'''
-
 class EarlyStopper:
     
     def __init__(self, patience: int, delta: float):

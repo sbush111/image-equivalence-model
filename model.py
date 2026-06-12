@@ -1,8 +1,7 @@
 from config import Config
 import torch
 from torch import nn, Tensor
-from torch.nn import functional as F
-from typing import Optional, Self
+from typing import Self
 
 class ImagePairMatcher(nn.Module):
 
@@ -61,12 +60,12 @@ class ImagePairMatcher(nn.Module):
     def predict(self, x1: Tensor, x2: Tensor, threshold: float = 0.5) -> Tensor:
         return torch.sigmoid(self.forward(x1, x2)) >= threshold
 
-    def parameter_count(self) -> int:
+    def get_parameter_count(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
-    @staticmethod
-    def from_config(config: Config) -> Self:
-        model = ImagePairMatcher(cnn_hidden_layers=[config.CNN_HIDDEN_CHANNELS_1, config.CNN_HIDDEN_CHANNELS_2, config.CNN_OUT_CHANNELS],
+    @classmethod
+    def from_config(cls, config: Config) -> Self:
+        model = cls(cnn_hidden_layers=[config.CNN_HIDDEN_CHANNELS_1, config.CNN_HIDDEN_CHANNELS_2, config.CNN_OUT_CHANNELS],
                                  fc_hidden_layers=[config.FC_HIDDEN_1, config.FC_HIDDEN_2],
                                  cnn_dropout=config.CNN_DROPOUT,
                                  fc_dropout=config.FC_DROPOUT)

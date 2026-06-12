@@ -3,7 +3,6 @@ from contextlib import nullcontext
 from data import ImagePairDataset
 from dataclasses import dataclass
 from model import ImagePairMatcher
-from numpy.typing import ArrayLike
 import torch
 from torch import device as Device
 from torch import nn
@@ -13,7 +12,7 @@ from torch.nn.modules.loss import _Loss as Loss
 from torch.optim import Optimizer
 from torch.utils.data import DataLoader
 from tqdm import tqdm
-from typing import Self, Optional, Literal
+from typing import Self, Optional, Literal, Sequence
 
 class EarlyStopper:
     
@@ -45,13 +44,13 @@ class EarlyStopper:
     def __repr__(self) -> str:
         return self.__str__()
 
-    @staticmethod
-    def from_config(config: Config) -> Self | None:
+    @classmethod
+    def from_config(cls, config: Config) -> Self | None:
         if (config.PATIENCE is None) != (config.DELTA is None):
             raise ValueError('Cannot determine early stopping criteria. PATIENCE and DELTA must both be None or neither be None.')
-        if config.PATIENCE is None:
+        if config.PATIENCE is None or config.DELTA is None:
             return None
-        return EarlyStopper(config.PATIENCE, config.DELTA)
+        return cls(config.PATIENCE, config.DELTA)
         
 
 @dataclass
@@ -77,7 +76,6 @@ def train(model: Module,
     train_accuracies = []
     validate_losses = []
     validate_accuracies = []
-    best_validate_loss = float('inf')
 
     batches_per_epoch = len(train_loader) + len(validate_loader)
     with tqdm(desc='train batches', total=num_epochs*batches_per_epoch, disable=not progress) as progress_bar:
@@ -147,6 +145,7 @@ def _run_epoch(mode: Literal['train', 'eval'],
 
         for firsts, lasts, labels in loader:
             if mode == 'train':
+                assert optimizer is not None
                 optimizer.zero_grad()
             firsts, lasts, labels = firsts.to(device), lasts.to(device), labels.to(device)
             outputs = model(firsts, lasts)
@@ -158,8 +157,10 @@ def _run_epoch(mode: Literal['train', 'eval'],
             if mode == 'eval':
                 continue
             loss.backward()
+            assert optimizer is not None
             optimizer.step()
 
+    assert loader.dataset is ImagePairDataset
     return running_loss / len(loader.dataset), float(correct) / len(loader.dataset)
 
     
@@ -170,9 +171,9 @@ class PipelineResults:
     criterion: Loss
     optimizer: Optimizer
     device: Device
-    early_stop: EarlyStopper
+    early_stop: EarlyStopper | None
     
-def run_pipeline(config: Config, progress: bool = True) -> TrainResults:
+def run_pipeline(config: Config, progress: bool = True) -> PipelineResults:
     
     model = ImagePairMatcher.from_config(config)
     criterion = nn.BCEWithLogitsLoss()
@@ -201,7 +202,7 @@ class TuneResults:
     best_train_results: TrainResults
     scores: dict[str, float]
 
-def randomized_search(param_grid: dict[str, ArrayLike], n: int) -> TuneResults:
+def randomized_search(param_grid: dict[str, Sequence], n: int) -> TuneResults:
 
     best_config = None
     best_model = None
@@ -228,4 +229,5 @@ def randomized_search(param_grid: dict[str, ArrayLike], n: int) -> TuneResults:
         best_score = score
         best_train_results = train_results
 
-    return TuneResults(best_config, best_model, best_score, train_results, scores)
+    assert isinstance(best_config, Config) and isinstance(best_model, Module) and isinstance(best_score, float) and isinstance(best_train_results, TrainResults)
+    return TuneResults(best_config, best_model, best_score, best_train_results, scores)

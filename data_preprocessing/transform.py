@@ -19,7 +19,7 @@ def get_transform(to_tensor: bool = True,
         transforms.append(T.ToImage())
         transforms.append(T.ToDtype(torch.float32, scale=True))
 
-    transforms.append(T.RandomAffine(degrees=rotation, 
+    transforms.append(T.RandomAffine(degrees=rotation, # type: ignore[arg-type]
                                      translate=(translate, translate),
                                      scale=(1 - scale, 1 + scale),
                                      interpolation=T.InterpolationMode.BILINEAR))

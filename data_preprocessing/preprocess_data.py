@@ -9,7 +9,6 @@ import random
 from transform import get_transform
 import torch
 from torchvision.datasets import CIFAR100
-from torchvision.transforms.v2 import Transform
 from tqdm import tqdm
 from typing import Optional
 

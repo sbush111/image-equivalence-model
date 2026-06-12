@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from random import Random
-from numpy.typing import ArrayLike
-from typing import Any, Optional, Self
+from typing import Optional, Self, Sequence
 
 @dataclass
 class Config:
@@ -25,9 +24,9 @@ class Config:
     PATIENCE: Optional[int] = None
     DELTA: Optional[float] = None
     
-    @staticmethod
-    def generate_randomized(param_grid: dict[str, ArrayLike], random_state: Optional[int] = None) -> Self:
-        config = Config()
+    @classmethod
+    def generate_randomized(cls, param_grid: dict[str, Sequence], random_state: Optional[int] = None) -> Self:
+        config = cls()
         rng = Random(random_state)
         for hyperparameter, options in param_grid.items():
             if hyperparameter not in list(filter(lambda s: s[0] != '_', dir(config))):

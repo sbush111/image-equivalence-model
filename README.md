@@ -26,15 +26,17 @@ If you wish to download the project, the following steps are required.
 
 ### Prereqisites
 
-1. Download Anaconda or Miniconda from https://www.anaconda.com.
+- Download Anaconda or Miniconda from https://www.anaconda.com.
 
-2. Download Git from https://git-scm.com, of course.
+- Download Git from https://git-scm.com, of course.
 
 ### Installation
 
+In the following order:
+
 1. From your command line, clone this GitHub repository with `git clone https://github.com/sbush111/image-equivalence-model.git`
 
-2. Set up the anaconda environment with `conda create -n image-equivalence-model -f environment.yml`
+2. Set up the anaconda environment with `conda env create -f environment.yml`
 
 3. Activate the environment with `conda activate image-equivalence-model`
 
@@ -42,7 +44,7 @@ If you wish to download the project, the following steps are required.
 
 5. Launch Jupyter Notebook with the command `jupyter notebook`. 
 
-From the Jupyter Notebook UI, you can the various scripts and notebooks in the project. 
+From the Jupyter Notebook UI, you can browse and run the various scripts and notebooks in the project. 
 
 ## License
 
